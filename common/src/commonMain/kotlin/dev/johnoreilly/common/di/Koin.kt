@@ -5,6 +5,7 @@ import dev.johnoreilly.common.data.remote.FantasyPremierLeagueApi
 import dev.johnoreilly.common.data.repository.FantasyPremierLeagueRepository
 import dev.johnoreilly.common.data.repository.FixtureDb
 import dev.johnoreilly.common.data.repository.PlayerDb
+import dev.johnoreilly.common.data.repository.PredictionDb
 import dev.johnoreilly.common.data.repository.TeamDb
 import dev.johnoreilly.common.platformModule
 import io.ktor.client.*
@@ -33,7 +34,16 @@ fun commonModule(enableNetworkLogs: Boolean) = module {
     single { createJson() }
     single { createHttpClient(get(), get(), enableNetworkLogs = enableNetworkLogs) }
 
-    single<Configuration> { RealmConfiguration.create(schema = setOf(PlayerDb::class, TeamDb::class, FixtureDb::class)) }
+    single<Configuration> {
+        RealmConfiguration.create(
+            schema = setOf(
+                PlayerDb::class,
+                TeamDb::class,
+                FixtureDb::class,
+                PredictionDb::class
+            )
+        )
+    }
     single { Realm.open(get()) }
 
     single { FantasyPremierLeagueRepository() }
@@ -44,14 +54,15 @@ fun commonModule(enableNetworkLogs: Boolean) = module {
 
 fun createJson() = Json { isLenient = true; ignoreUnknownKeys = true }
 
-fun createHttpClient(httpClientEngine: HttpClientEngine, json: Json, enableNetworkLogs: Boolean) = HttpClient(httpClientEngine) {
-    install(ContentNegotiation) {
-        json(json)
-    }
-    if (enableNetworkLogs) {
-        install(Logging) {
-            logger = Logger.DEFAULT
-            level = LogLevel.NONE
+fun createHttpClient(httpClientEngine: HttpClientEngine, json: Json, enableNetworkLogs: Boolean) =
+    HttpClient(httpClientEngine) {
+        install(ContentNegotiation) {
+            json(json)
+        }
+        if (enableNetworkLogs) {
+            install(Logging) {
+                logger = Logger.DEFAULT
+                level = LogLevel.NONE
+            }
         }
     }
-}

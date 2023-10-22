@@ -10,6 +10,7 @@ import dev.johnoreilly.common.data.repository.FantasyPremierLeagueRepository
 import dev.johnoreilly.common.domain.entities.GameFixture
 import dev.johnoreilly.common.domain.entities.Player
 import dev.johnoreilly.common.domain.entities.PlayerPastHistory
+import dev.johnoreilly.common.domain.entities.Prediction
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,6 +29,7 @@ class FantasyPremierLeagueViewModel(
 ) : ViewModel() {
 
     val searchQuery = MutableStateFlow("")
+    val currentGameweekToFixture = repository.currentGameweek
     val allPlayers = repository.playerList
     val visiblePlayerList: StateFlow<List<Player>> =
         searchQuery.debounce(250).flatMapLatest { searchQuery ->
@@ -78,11 +80,17 @@ class FantasyPremierLeagueViewModel(
     }
 
     fun getFixture(fixtureId: Int?): GameFixture? {
-        return fixturesList.value.find { it.id == fixtureId}
+        return fixturesList.value.find { it.id == fixtureId }
     }
 
     fun updateLeagues(leagues: List<String>) {
         repository.updateLeagues(leagues)
+    }
+
+    fun onSubmitPredict(prediction: Prediction) {
+        viewModelScope.launch {
+            repository.submitPredict(prediction)
+        }
     }
 
 }

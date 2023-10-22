@@ -3,6 +3,7 @@ import FantasyPremierLeagueKit
 import KMPNativeCoroutinesAsync
 import AsyncAlgorithms
 import CollectionConcurrencyKit
+import KMPNativeCoroutinesAsync
 
 
 extension PlayerPastHistory: Identifiable { }
@@ -14,6 +15,7 @@ class FantasyPremierLeagueViewModel: ObservableObject {
     @Published var playerList = [Player]()
     @Published var fixtureList = [GameFixture]()
     @Published var gameWeekFixtures = [Int: [GameFixture]]()
+    @Published var gameWeek: Int = 1
     
     @Published var playerHistory = [PlayerPastHistory]()
     @Published var leagueStandings = [LeagueStandingsDto]()
@@ -30,6 +32,12 @@ class FantasyPremierLeagueViewModel: ObservableObject {
         
         Task {
             do {
+                //TODO improve this
+                let thisWeek = asyncSequence(for: repository.currentGameweek)
+                for try await weekNumber in thisWeek {
+                    gameWeek = Int(weekNumber.int32Value)
+                }
+                
                 let leagueStream = asyncSequence(for: repository.leagues)
                 for try await data in leagueStream {
                     leagues = data
@@ -123,6 +131,10 @@ class FantasyPremierLeagueViewModel: ObservableObject {
         let leagues = leagueListString.components(separatedBy:", ")
         print("setLeagues, leagues = \(leagues)")
         repository.updateLeagues(leagues: leagues)
+    }
+    
+    func onSubmitPredict(prediction: Prediction) {
+        repository.submitPredict(prediction: prediction)
     }
 }
 

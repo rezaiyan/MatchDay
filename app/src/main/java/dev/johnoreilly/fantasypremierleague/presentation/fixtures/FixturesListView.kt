@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.placeholder.placeholder
 import dev.johnoreilly.common.domain.entities.GameFixture
+import dev.johnoreilly.common.domain.entities.Prediction
 import dev.johnoreilly.fantasypremierleague.presentation.global.lowfidelitygray
 import dev.johnoreilly.fantasypremierleague.presentation.global.maroon200
 import org.koin.androidx.compose.getViewModel
@@ -38,7 +39,8 @@ fun FixturesListView(
     val fixturesViewModel: FixturesViewModel = getViewModel()
 
     val fixturesState = fixturesViewModel.gameweekToFixtures.collectAsStateWithLifecycle()
-    val currentGameweek: State<Int> = fixturesViewModel.currentGameweek.collectAsStateWithLifecycle()
+    val currentGameweek: State<Int> =
+        fixturesViewModel.currentGameweek.collectAsStateWithLifecycle()
     val selectedGameweek = remember { mutableIntStateOf(currentGameweek.value) }
     val isLoading = fixturesState.value[currentGameweek.value] == null
     Scaffold(
@@ -53,8 +55,8 @@ fun FixturesListView(
                     if (gameweekChange is GameweekChange.PastGameweek) selectedGameweek.intValue -= 1 else selectedGameweek.intValue += 1
                 })
             LazyColumn {
-                val fixtureItems: List<GameFixture> = if(isLoading) placeholderFixtureList
-                    else fixturesState.value[selectedGameweek.intValue] ?: emptyList()
+                val fixtureItems: List<GameFixture> = if (isLoading) placeholderFixtureList
+                else fixturesState.value[selectedGameweek.intValue] ?: emptyList()
                 items(
                     items = fixtureItems,
                     itemContent = { fixture ->
@@ -139,7 +141,12 @@ private val placeholderFixtureList = listOf(
         awayTeamPhotoUrl = "",
         homeTeamScore = null,
         awayTeamScore = null,
-        event = 0
+        event = 0,
+        prediction = Prediction(
+            fixtureId = 1,
+            homeScores = "2",
+            awayScores = "1",
+        ),
     ),
     GameFixture(
         id = 1,
@@ -150,7 +157,12 @@ private val placeholderFixtureList = listOf(
         awayTeamPhotoUrl = "",
         homeTeamScore = null,
         awayTeamScore = null,
-        event = 0
+        event = 0,
+        prediction = Prediction(
+            fixtureId = 1,
+            homeScores = "2",
+            awayScores = "1",
+        ),
     ),
     GameFixture(
         id = 1,
@@ -161,7 +173,12 @@ private val placeholderFixtureList = listOf(
         awayTeamPhotoUrl = "",
         homeTeamScore = null,
         awayTeamScore = null,
-        event = 0
+        event = 0,
+        prediction = Prediction(
+            fixtureId = 1,
+            homeScores = "2",
+            awayScores = "1",
+        ),
     ),
     GameFixture(
         id = 1,
@@ -172,7 +189,12 @@ private val placeholderFixtureList = listOf(
         awayTeamPhotoUrl = "",
         homeTeamScore = null,
         awayTeamScore = null,
-        event = 0
+        event = 0,
+        prediction = Prediction(
+            fixtureId = 1,
+            homeScores = "2",
+            awayScores = "1",
+        ),
     ),
     GameFixture(
         id = 1,
@@ -183,6 +205,11 @@ private val placeholderFixtureList = listOf(
         awayTeamPhotoUrl = "",
         homeTeamScore = null,
         awayTeamScore = null,
-        event = 0
+        event = 0,
+        prediction = Prediction(
+            fixtureId = 1,
+            homeScores = "2",
+            awayScores = "1",
+        ),
     )
 )

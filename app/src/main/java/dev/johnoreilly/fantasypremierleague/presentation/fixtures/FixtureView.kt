@@ -11,6 +11,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -21,6 +23,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.google.accompanist.placeholder.placeholder
 import dev.johnoreilly.common.domain.entities.GameFixture
+import dev.johnoreilly.common.domain.entities.Prediction
 import dev.johnoreilly.fantasypremierleague.presentation.global.lowfidelitygray
 import dev.johnoreilly.fantasypremierleague.presentation.global.maroon200
 
@@ -28,7 +31,7 @@ import dev.johnoreilly.fantasypremierleague.presentation.global.maroon200
 fun FixtureView(
     fixture: GameFixture,
     onFixtureSelected: (fixtureId: Int) -> Unit,
-    isDataLoading: Boolean
+    isDataLoading: Boolean,
 ) {
     Surface(
         modifier = Modifier
@@ -44,6 +47,66 @@ fun FixtureView(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceEvenly
         ) {
+
+            if (fixture.isLive) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp)
+                ) {
+                    Text(
+                        text = if (fixture.isPredicted) {
+                            "Prediction submitted! Watch the game live!"
+                        } else {
+                            "Live!"
+                        },
+                        color = Color.White,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier
+                            .background(
+                                shape = RoundedCornerShape(10.dp),
+                                brush = Brush.linearGradient(
+                                    listOf(
+                                        Color(0xFFC5A8FF),
+                                        Color(0xFF7E43A3),
+                                    )
+                                )
+                            )
+                            .padding(8.dp)
+                    )
+                }
+
+            } else if (fixture.isNotStartedYet) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp)
+                ) {
+                    Text(
+                        text = if (fixture.isPredicted) {
+                            "Prediction submitted!"
+                        } else {
+                            "Join the Betting Action!"
+                        },
+                        color = Color.White,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier
+                            .background(
+                                shape = RoundedCornerShape(10.dp),
+                                brush = Brush.linearGradient(
+                                    listOf(
+                                        Color(0xFFC5A8FF),
+                                        Color(0xFF7E43A3),
+                                    )
+                                )
+                            )
+                            .padding(8.dp)
+                    )
+                }
+            }
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -56,7 +119,7 @@ fun FixtureView(
                     fixture.homeTeamPhotoUrl
                 )
                 Text(
-                    text = "${fixture.homeTeamScore}",
+                    text = fixture.homeScore,
                     fontWeight = FontWeight.Bold,
                     fontSize = 25.sp
                 )
@@ -67,7 +130,7 @@ fun FixtureView(
                         .background(color = maroon200)
                 )
                 Text(
-                    text = "${fixture.awayTeamScore}",
+                    text = fixture.awayScore,
                     fontWeight = FontWeight.Bold,
                     fontSize = 25.sp
                 )
@@ -84,7 +147,8 @@ fun FixtureView(
             )
 
             fixture.localKickoffTime.let { localKickoffTime ->
-                val formattedTime = "%02d:%02d".format(localKickoffTime.hour, localKickoffTime.minute)
+                val formattedTime =
+                    "%02d:%02d".format(localKickoffTime.hour, localKickoffTime.minute)
                 Text(
                     modifier = Modifier.padding(bottom = 16.dp),
                     text = formattedTime,
@@ -135,7 +199,12 @@ fun PreviewFixtureView() {
                 "",
                 3,
                 0,
-                5
+                5,
+                prediction = Prediction(
+                    fixtureId = 1,
+                    homeScores = "1",
+                    awayScores = "0"
+                )
             ),
             onFixtureSelected = {},
             isDataLoading = false
