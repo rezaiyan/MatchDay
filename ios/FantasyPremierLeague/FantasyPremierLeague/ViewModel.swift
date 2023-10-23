@@ -134,7 +134,9 @@ class FantasyPremierLeagueViewModel: ObservableObject {
     }
     
     func onSubmitPredict(prediction: Prediction) {
-        repository.submitPredict(prediction: prediction)
+        Task {
+            try await asyncFunction(for: repository.submitPredict(prediction: prediction))
+        }
     }
 }
 

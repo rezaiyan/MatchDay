@@ -286,8 +286,9 @@ private fun PredictionView(
                 text = gameFixture.getPredictionMessage(),
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier
-                    .padding(top = 8.dp)
-                    .align(Alignment.CenterHorizontally)
+                    .padding(top = 8.dp, start = 16.dp, end = 16.dp)
+                    .align(Alignment.CenterHorizontally),
+                color = Color.Gray
             )
         }
 

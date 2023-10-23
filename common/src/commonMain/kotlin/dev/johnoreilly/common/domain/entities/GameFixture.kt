@@ -44,7 +44,11 @@ data class GameFixture(
     }
 
     fun getPredictionMessage(): String {
-        if (isPredicted.not() || homeScore == RESULT_PLACE_HOLDER || awayScore == RESULT_PLACE_HOLDER) return ""
+        if (isPredicted.not()) return ""
+
+        if (isNotStartedYet) {
+            return "The game hasn't started yet. Come back later to see if your prediction was correct!"
+        }
 
         val homeDifference = prediction!!.homeScores.toInt() - homeTeamScore!!
         val awayDifference = prediction.awayScores.toInt() - awayTeamScore!!

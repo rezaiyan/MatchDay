@@ -41,28 +41,33 @@ struct FixtureDetailView: View {
 
 
 struct PredictionView: View {
-    @State private var homeTeamPrediction = ""
-    @State private var awayTeamPrediction = ""
-    @State private var isPredicted = false
+    @State private var homeTeamPrediction: String
+    @State private var awayTeamPrediction: String
 
     var gameFixture: GameFixture
     var onSubmitPredict: (Prediction) -> Void
 
+    init(gameFixture: GameFixture, onSubmitPredict: @escaping (Prediction) -> Void) {
+        self.gameFixture = gameFixture
+        self.onSubmitPredict = onSubmitPredict
+        _homeTeamPrediction = State(initialValue: gameFixture.prediction?.homeScores ?? "")
+        _awayTeamPrediction = State(initialValue: gameFixture.prediction?.awayScores ?? "")
+    }
+
     var body: some View {
-        let isNotPredicted = !isPredicted //TODO remove after testing
+        let isNotPredicted = !gameFixture.isPredicted
         
         VStack(spacing: 16) {
             LinearGradientText(isNotPredicted: isNotPredicted)
 
             HStack {
-                ScoreTextField(value: $homeTeamPrediction, isPredicted: $isPredicted)
+                ScoreTextField(value: $homeTeamPrediction, isPredicted: !isNotPredicted)
                 Spacer().frame(width: 16)
-                ScoreTextField(value: $awayTeamPrediction, isPredicted: $isPredicted)
+                ScoreTextField(value: $awayTeamPrediction, isPredicted: !isNotPredicted)
             }
 
             if isNotPredicted {
                 SubmitButton(onSubmit: {
-                    isPredicted = true
                     onSubmitPredict(
                         Prediction(
                             id: nil,
@@ -105,7 +110,7 @@ struct LinearGradientText: View {
 
 struct ScoreTextField: View {
     @Binding var value: String
-    @Binding var isPredicted: Bool
+    var isPredicted: Bool
 
     var body: some View {
         TextField("", text: $value)
