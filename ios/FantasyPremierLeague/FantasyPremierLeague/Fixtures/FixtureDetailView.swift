@@ -43,25 +43,34 @@ struct FixtureDetailView: View {
 struct PredictionView: View {
     @State private var homeTeamPrediction = ""
     @State private var awayTeamPrediction = ""
+    @State private var isPredicted = false
 
     var gameFixture: GameFixture
     var onSubmitPredict: (Prediction) -> Void
 
     var body: some View {
-        let isNotPredicted = !gameFixture.isPredicted
+        let isNotPredicted = !isPredicted //TODO remove after testing
         
         VStack(spacing: 16) {
             LinearGradientText(isNotPredicted: isNotPredicted)
 
             HStack {
-                ScoreTextField(value: $homeTeamPrediction)
+                ScoreTextField(value: $homeTeamPrediction, isPredicted: $isPredicted)
                 Spacer().frame(width: 16)
-                ScoreTextField(value: $awayTeamPrediction)
+                ScoreTextField(value: $awayTeamPrediction, isPredicted: $isPredicted)
             }
 
             if isNotPredicted {
                 SubmitButton(onSubmit: {
-                    onSubmitPredict(Prediction(id: nil,fixtureId: gameFixture.id, homeScores: homeTeamPrediction, awayScores: awayTeamPrediction))
+                    isPredicted = true
+                    onSubmitPredict(
+                        Prediction(
+                            id: nil,
+                            fixtureId: gameFixture.id,
+                            homeScores: homeTeamPrediction,
+                            awayScores: awayTeamPrediction
+                        )
+                    )
                 })
             } else {
                 Text(gameFixture.getPredictionMessage())
@@ -96,6 +105,7 @@ struct LinearGradientText: View {
 
 struct ScoreTextField: View {
     @Binding var value: String
+    @Binding var isPredicted: Bool
 
     var body: some View {
         TextField("", text: $value)
@@ -108,6 +118,7 @@ struct ScoreTextField: View {
             .clipShape(RoundedRectangle(cornerRadius: 10))
             .frame(width: 120, height: 60)
             .padding(.horizontal, 16)
+            .disabled(isPredicted)
     }
 }
 

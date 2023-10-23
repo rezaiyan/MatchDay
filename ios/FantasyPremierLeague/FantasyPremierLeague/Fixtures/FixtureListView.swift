@@ -28,7 +28,11 @@ struct FixtureListView: View {
                         }
                     }
                     List(viewModel.gameWeekFixtures[viewModel.gameWeek] ?? []) { fixture in
-                        NavigationLink(destination: FixtureDetailView(fixture: fixture, onSubmitPredict: { prediction in viewModel.onSubmitPredict(prediction: prediction) })) {
+                        NavigationLink(
+                            destination: FixtureDetailView(
+                                fixture: fixture,
+                                onSubmitPredict: { prediction in viewModel.onSubmitPredict(prediction: prediction) }
+                        )) {
                             FixtureView(fixture: fixture)
                         }
                     }
