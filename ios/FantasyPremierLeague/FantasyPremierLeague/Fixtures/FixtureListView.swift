@@ -8,8 +8,7 @@ extension GameFixture: Identifiable { }
 
 struct FixtureListView: View {
     @ObservedObject var viewModel: FantasyPremierLeagueViewModel
-    
-    @State var gameWeek = 1
+
     
     var body: some View {
         VStack {
@@ -17,19 +16,23 @@ struct FixtureListView: View {
                 VStack(spacing: 0) {
                     HStack {
                         Button(action: {
-                            if (gameWeek > 1) { gameWeek = gameWeek - 1 }
+                            if (viewModel.gameWeek > 1) { viewModel.gameWeek = viewModel.gameWeek - 1 }
                         }) {
                           Image(systemName: "arrow.left")
                         }
-                        Text("Gameweek \(gameWeek)")
+                        Text("Gameweek \(viewModel.gameWeek)")
                         Button(action: {
-                            if (gameWeek < 38) { gameWeek = gameWeek + 1 }
+                            if (viewModel.gameWeek < 38) { viewModel.gameWeek = viewModel.gameWeek + 1 }
                         }) {
                           Image(systemName: "arrow.right")
                         }
                     }
-                    List(viewModel.gameWeekFixtures[gameWeek] ?? []) { fixture in
-                        NavigationLink(destination: FixtureDetailView(fixture: fixture)) {
+                    List(viewModel.gameWeekFixtures[viewModel.gameWeek] ?? []) { fixture in
+                        NavigationLink(
+                            destination: FixtureDetailView(
+                                fixture: fixture,
+                                onSubmitPredict: { prediction in viewModel.onSubmitPredict(prediction: prediction) }
+                        )) {
                             FixtureView(fixture: fixture)
                         }
                     }
@@ -56,14 +59,15 @@ struct FixtureView: View {
     
     var body: some View {
         VStack {
+            PredictView(fixture: fixture)
             HStack {
                 ClubInFixtureView(teamName: fixture.homeTeam, teamPhotoUrl: fixture.homeTeamPhotoUrl)
                 Spacer()
-                Text("(\(fixture.homeTeamScore ?? 0))").font(.system(size: 20))
+                Text(fixture.homeScore).font(.system(size: 20))
                 Spacer()
                 Text("vs").font(.system(size: 22))
                 Spacer()
-                Text("(\(fixture.awayTeamScore ?? 0))").font(.system(size: 20))
+                Text(fixture.awayScore).font(.system(size: 20))
                 Spacer()
                 ClubInFixtureView(teamName: fixture.awayTeam, teamPhotoUrl: fixture.awayTeamPhotoUrl)
             }
@@ -74,6 +78,37 @@ struct FixtureView: View {
     }
 }
 
+struct PredictView: View {
+    let fixture: GameFixture
+
+    var body: some View {
+            if fixture.isLive {
+                VStack {
+                    Text(fixture.isPredicted ? "Prediction submitted! Watch the game live!" : "Live!")
+                        .font(.system(size: 14))
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                        .padding(8)
+                        .background(LinearGradient(gradient: Gradient(colors: [Color(red: 0.77, green: 0.66, blue: 1.00), Color(red: 0.49, green: 0.26, blue: 0.64)]), startPoint: .top, endPoint: .bottom))
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+                .frame(maxWidth: .infinity)
+                .padding(8)
+            } else if fixture.isNotStartedYet {
+                VStack {
+                    Text(fixture.isPredicted ? "Prediction submitted!" : "Join the Betting Action!")
+                        .font(.system(size: 14))
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                        .padding(8)
+                        .background(LinearGradient(gradient: Gradient(colors: [Color(red: 0.77, green: 0.66, blue: 1.00), Color(red: 0.49, green: 0.26, blue: 0.64)]), startPoint: .top, endPoint: .bottom))
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+                .frame(maxWidth: .infinity)
+                .padding(8)
+            }
+        }
+}
 
 struct ClubInFixtureView: View {
     let teamName: String

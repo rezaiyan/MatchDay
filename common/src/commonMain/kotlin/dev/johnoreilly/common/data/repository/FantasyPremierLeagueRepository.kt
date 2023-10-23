@@ -11,6 +11,7 @@ import dev.johnoreilly.common.data.remote.FantasyPremierLeagueApi
 import dev.johnoreilly.common.domain.entities.GameFixture
 import dev.johnoreilly.common.domain.entities.Player
 import dev.johnoreilly.common.domain.entities.PlayerPastHistory
+import dev.johnoreilly.common.domain.entities.Prediction
 import dev.johnoreilly.common.domain.entities.Team
 import io.realm.kotlin.Realm
 import io.realm.kotlin.UpdatePolicy
@@ -25,14 +26,25 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
+import kotlin.random.Random
 
 
-class TeamDb: RealmObject {
+class PredictionDb : RealmObject {
+    @PrimaryKey
+    var id: Int = 0
+    var fixtureId: Int = 0
+    var homeScores: String = ""
+    var awayScores: String = ""
+}
+
+
+class TeamDb : RealmObject {
     @PrimaryKey
     var id: Int = 0
     var index: Int = 0
@@ -40,7 +52,7 @@ class TeamDb: RealmObject {
     var code: Int = 0
 }
 
-class PlayerDb: RealmObject {
+class PlayerDb : RealmObject {
     @PrimaryKey
     var id: Int = 0
     var firstName: String = ""
@@ -54,7 +66,7 @@ class PlayerDb: RealmObject {
     var team: TeamDb? = null
 }
 
-class FixtureDb: RealmObject {
+class FixtureDb : RealmObject {
     @PrimaryKey
     var id: Int = 0
     var kickoffTime: String? = ""
@@ -63,6 +75,7 @@ class FixtureDb: RealmObject {
     var homeTeamScore: Int = 0
     var awayTeamScore: Int = 0
     var event: Int = 0
+    var prediction: PredictionDb? = null
 }
 
 class FantasyPremierLeagueRepository : KoinComponent {
@@ -95,90 +108,115 @@ class FantasyPremierLeagueRepository : KoinComponent {
 
     private var _currentGameweek: MutableStateFlow<Int> = MutableStateFlow(1)
     @NativeCoroutines
-    val currentGameweek = _currentGameweek.asStateFlow()
+    val currentGameweek: StateFlow<Int> = _currentGameweek.asStateFlow()
 
     init {
         coroutineScope.launch {
             loadData()
-
-            launch {
-                realm.query<TeamDb>().asFlow()
-                    .map { it.list }
-                    .collect { it: RealmResults<TeamDb> ->
-                        _teamList.value = it.toList().map {
-                        Team(it.id, it.index, it.name, it.code)
-                    }
-                }
-            }
-
-            launch {
-                realm.query<PlayerDb>().asFlow()
-                    .map { it.list }
-                    .collect { it: RealmResults<PlayerDb> ->
-                    _playerList.value = it.toList().map {
-                        val playerName = "${it.firstName} ${it.secondName}"
-                        val playerImageUrl = "https://resources.premierleague.com/premierleague/photos/players/110x140/p${it.code}.png"
-                        val teamName = it.team?.name ?: ""
-                        val currentPrice = it.nowCost / 10.0
-
-                        Player(it.id, playerName, teamName, playerImageUrl, it.totalPoints, currentPrice, it.goalsScored, it.assists)
-                    }
-                }
-            }
-
-            launch {
-                realm.query<FixtureDb>().asFlow()
-                    .map { it.list }
-                    .collect { it: RealmResults<FixtureDb> ->
-                        _fixtureList.value = it.toList().mapNotNull {
-                            val homeTeamName = it.homeTeam?.name ?: ""
-                            val homeTeamCode = it.homeTeam?.code ?: 0
-                            val homeTeamScore = it.homeTeamScore ?: 0
-                            val homeTeamPhotoUrl =
-                                "https://resources.premierleague.com/premierleague/badges/t${homeTeamCode}.png"
-
-                            val awayTeamName = it.awayTeam?.name ?: ""
-                            val awayTeamCode = it.awayTeam?.code ?: 0
-                            val awayTeamScore = it.awayTeamScore ?: 0
-                            val awayTeamPhotoUrl =
-                                "https://resources.premierleague.com/premierleague/badges/t${awayTeamCode}.png"
-
-                            it.kickoffTime?.let { kickoffTime ->
-                                val localKickoffTime = kickoffTime.toInstant()
-                                    .toLocalDateTime(TimeZone.currentSystemDefault())
-
-                                val gf = GameFixture(
-                                    it.id,
-                                    localKickoffTime,
-                                    homeTeamName,
-                                    awayTeamName,
-                                    homeTeamPhotoUrl,
-                                    awayTeamPhotoUrl,
-                                    homeTeamScore,
-                                    awayTeamScore,
-                                    it.event
-                                )
-
-                                return@let gf
-                            }
-                        }
-                        //Build gameweek to fixture map
-                        _gameweekToFixtureMap.value = _fixtureList.value
-                            .groupBy { it.event }
-                }
-            }
-
         }
     }
 
     private suspend fun loadData() {
-        try {
-            val bootstrapStaticInfoDto = fantasyPremierLeagueApi.fetchBootstrapStaticInfo()
-            val fixtures = fantasyPremierLeagueApi.fetchFixtures()
-            writeDataToDb(bootstrapStaticInfoDto, fixtures)
-        } catch (e: Exception) {
-            // TODO surface this to UI/option to retry etc ?
-            println("Exception reading data: $e")
+        coroutineScope.launch {
+            try {
+                val bootstrapStaticInfoDto = fantasyPremierLeagueApi.fetchBootstrapStaticInfo()
+                val fixtures = fantasyPremierLeagueApi.fetchFixtures()
+                writeDataToDb(bootstrapStaticInfoDto, fixtures)
+
+                launch {
+                    realm.query<TeamDb>().asFlow()
+                        .map { it.list }
+                        .collect { it: RealmResults<TeamDb> ->
+                            _teamList.value = it.toList().map {
+                                Team(it.id, it.index, it.name, it.code)
+                            }
+                        }
+                }
+
+                launch {
+                    realm.query<PlayerDb>().asFlow()
+                        .map { it.list }
+                        .collect { it: RealmResults<PlayerDb> ->
+                            _playerList.value = it.toList().map {
+                                val playerName = "${it.firstName} ${it.secondName}"
+                                val playerImageUrl =
+                                    "https://resources.premierleague.com/premierleague/photos/players/110x140/p${it.code}.png"
+                                val teamName = it.team?.name ?: ""
+                                val currentPrice = it.nowCost / 10.0
+
+                                Player(
+                                    id = it.id,
+                                    name = playerName,
+                                    team = teamName,
+                                    photoUrl = playerImageUrl,
+                                    points = it.totalPoints,
+                                    currentPrice = currentPrice,
+                                    goalsScored = it.goalsScored,
+                                    assists = it.assists
+                                )
+                            }
+                        }
+                }
+
+                launch {
+                    realm.query<FixtureDb>().asFlow()
+                        .map { it.list }
+                        .collect { it: RealmResults<FixtureDb> ->
+                            _fixtureList.value = it.toList().mapNotNull {
+                                val homeTeamName = it.homeTeam?.name ?: ""
+                                val homeTeamCode = it.homeTeam?.code ?: 0
+                                val homeTeamScore = it.homeTeamScore ?: 0
+                                val homeTeamPhotoUrl =
+                                    "https://resources.premierleague.com/premierleague/badges/t${homeTeamCode}.png"
+
+                                val awayTeamName = it.awayTeam?.name ?: ""
+                                val awayTeamCode = it.awayTeam?.code ?: 0
+                                val awayTeamScore = it.awayTeamScore ?: 0
+                                val awayTeamPhotoUrl =
+                                    "https://resources.premierleague.com/premierleague/badges/t${awayTeamCode}.png"
+
+                                it.kickoffTime?.let { kickoffTime ->
+                                    val localKickoffTime = kickoffTime.toInstant()
+                                        .toLocalDateTime(TimeZone.currentSystemDefault())
+
+                                    val predictionDb = it.prediction
+                                    val prediction =
+                                        if (predictionDb != null && predictionDb.id != 0) {
+                                            Prediction(
+                                                id = predictionDb.id,
+                                                fixtureId = it.id,
+                                                homeScores = predictionDb.homeScores,
+                                                awayScores = predictionDb.awayScores,
+                                            )
+
+                                        } else {
+                                            null
+                                        }
+                                    val gf = GameFixture(
+                                        id = it.id,
+                                        localKickoffTime = localKickoffTime,
+                                        homeTeam = homeTeamName,
+                                        awayTeam = awayTeamName,
+                                        homeTeamPhotoUrl = homeTeamPhotoUrl,
+                                        awayTeamPhotoUrl = awayTeamPhotoUrl,
+                                        homeTeamScore = homeTeamScore,
+                                        awayTeamScore = awayTeamScore,
+                                        event = it.event,
+                                        prediction = prediction
+                                    )
+
+                                    return@let gf
+                                }
+                            }
+                            //Build gameweek to fixture map
+                            _gameweekToFixtureMap.value = _fixtureList.value
+                                .groupBy { it.event }
+                        }
+                }
+            } catch (e: Exception) {
+                // TODO surface this to UI/option to retry etc ?
+                println("Exception reading data: $e")
+            }
         }
 
     }
@@ -186,7 +224,7 @@ class FantasyPremierLeagueRepository : KoinComponent {
     private suspend fun writeDataToDb(
         bootstrapStaticInfoDto: BootstrapStaticInfoDto,
         fixtures: List<FixtureDto>
-    )  {
+    ) {
 
         realm.write {
             // store teams
@@ -217,10 +255,12 @@ class FantasyPremierLeagueRepository : KoinComponent {
             }
 
             //store current gameweek
-            _currentGameweek.value = bootstrapStaticInfoDto.events.firstOrNull { it.is_current }?.id ?: 1
+            _currentGameweek.value =
+                bootstrapStaticInfoDto.events.firstOrNull { it.is_current }?.id ?: 1
 
             // store fixtures
             val teams = query<TeamDb>().find().toList()
+            val predictions = query<PredictionDb>().find().toList()
             fixtures.forEach { fixtureDto ->
                 if (fixtureDto.kickoff_time != null) {
                     copyToRealm(FixtureDb().apply {
@@ -232,6 +272,7 @@ class FantasyPremierLeagueRepository : KoinComponent {
 
                         homeTeam = teams.find { it.index == fixtureDto.team_h }
                         awayTeam = teams.find { it.index == fixtureDto.team_a }
+                        prediction = predictions.find { it.fixtureId == fixtureDto.id }
                     }, updatePolicy = UpdatePolicy.ALL)
                 }
             }
@@ -256,8 +297,28 @@ class FantasyPremierLeagueRepository : KoinComponent {
         return fantasyPremierLeagueApi.fetchEventStatus()
     }
 
+    @NativeCoroutines
+    suspend fun submitPredict(prediction: Prediction) {
+        realm.write {
+            copyToRealm(PredictionDb().apply {
+                id = prediction.id ?: generateUniqueID()
+                fixtureId = prediction.fixtureId
+                homeScores = prediction.homeScores
+                awayScores = prediction.awayScores
+            }, updatePolicy = UpdatePolicy.ALL)
+        }
+        loadData()
+    }
+
     fun updateLeagues(leagues: List<String>) {
         appSettings.updatesLeagesSetting(leagues)
     }
 
+}
+
+
+fun generateUniqueID(): Int {
+    val timestamp = Clock.System.now().toEpochMilliseconds().toInt()
+    val random = Random.nextInt(1000)
+    return timestamp + random
 }

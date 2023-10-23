@@ -114,6 +114,7 @@ fun MainLayout(viewModel: FantasyPremierLeagueViewModel) {
                         fixture?.let {
                             FixtureDetailsView(
                                 fixture,
+                                onSubmitPredict = viewModel::onSubmitPredict,
                                 popBackStack = { navController.popBackStack() })
                         }
                     }
